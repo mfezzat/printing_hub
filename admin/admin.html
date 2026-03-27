@@ -1,0 +1,946 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Printing Hub — Admin Panel</title>
+<style>
+/* ── Reset ── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --green:#1D9E75;--green-light:#E1F5EE;--green-dark:#0F6E56;--green-mid:#9FE1CB;
+  --amber:#BA7517;--amber-light:#FAEEDA;
+  --red:#A32D2D;--red-light:#FCEBEB;
+  --blue:#185FA5;--blue-light:#E6F1FB;
+  --sidebar-w:220px;
+  --text:#1a1a1a;--text2:#555;--text3:#888;
+  --bg:#f5f5f2;--bg2:#fff;--bg3:#eeeee9;
+  --border:#ddddd8;--radius:8px;--radius-lg:12px;
+}
+html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;font-size:14px;background:var(--bg);color:var(--text)}
+
+/* ── Layout ── */
+.layout{display:flex;height:100dvh;overflow:hidden}
+.sidebar{width:var(--sidebar-w);background:var(--bg2);border-left:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;overflow-y:auto}
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{height:52px;background:var(--bg2);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 20px;gap:12px;flex-shrink:0}
+.content{flex:1;overflow-y:auto;padding:20px}
+
+/* ── Sidebar ── */
+.brand{padding:18px 16px 12px;border-bottom:1px solid var(--border)}
+.brand-name{font-size:15px;font-weight:800;color:var(--green)}
+.brand-sub{font-size:11px;color:var(--text3);margin-top:2px}
+.nav-section{padding:8px 0}
+.nav-label{font-size:10px;font-weight:700;color:var(--text3);padding:6px 16px 3px;letter-spacing:.5px;text-transform:uppercase}
+.nav-item{display:flex;align-items:center;gap:9px;padding:8px 16px;cursor:pointer;color:var(--text2);border-radius:0;transition:all .15s;font-size:13px;border:none;background:transparent;width:100%;text-align:right}
+.nav-item:hover{background:var(--bg);color:var(--text)}
+.nav-item.active{background:var(--green-light);color:var(--green-dark);font-weight:600}
+.nav-item svg{width:16px;height:16px;flex-shrink:0}
+
+/* ── Topbar ── */
+.page-title{font-size:16px;font-weight:700;flex:1}
+.topbar-actions{display:flex;gap:8px;align-items:center}
+.badge-count{background:var(--red-light);color:var(--red);padding:2px 7px;border-radius:10px;font-size:11px;font-weight:700}
+
+/* ── Buttons ── */
+.btn{padding:7px 14px;border:none;border-radius:var(--radius);font-size:13px;font-weight:600;cursor:pointer;transition:opacity .15s;display:inline-flex;align-items:center;gap:6px}
+.btn:active{opacity:.85}
+.btn-green{background:var(--green);color:#fff}
+.btn-outline{background:transparent;color:var(--green);border:1.5px solid var(--green)}
+.btn-gray{background:var(--bg3);color:var(--text);border:1px solid var(--border)}
+.btn-red{background:var(--red-light);color:var(--red);border:1px solid #F7C1C1}
+.btn-sm{padding:4px 10px;font-size:12px}
+
+/* ── Cards / panels ── */
+.panel{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px;margin-bottom:16px}
+.panel-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.panel-title{font-size:14px;font-weight:700}
+.metric-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+.metric-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px 16px}
+.metric-label{font-size:11px;color:var(--text3);margin-bottom:4px}
+.metric-val{font-size:22px;font-weight:800}
+.metric-sub{font-size:11px;color:var(--text2);margin-top:2px}
+
+/* ── Tables ── */
+table{width:100%;border-collapse:collapse}
+th{font-size:11px;font-weight:700;color:var(--text3);text-align:right;padding:8px 12px;border-bottom:2px solid var(--border);background:var(--bg);white-space:nowrap}
+td{padding:10px 12px;border-bottom:1px solid var(--border);font-size:13px;vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--bg)}
+.tbl-wrap{overflow-x:auto;border-radius:var(--radius-lg);border:1px solid var(--border);background:var(--bg2)}
+
+/* ── Status badges ── */
+.badge{padding:3px 9px;border-radius:10px;font-size:11px;font-weight:700;white-space:nowrap}
+.badge-pending{background:#FFF3CD;color:#856404}
+.badge-confirmed,.badge-in_progress{background:var(--blue-light);color:var(--blue)}
+.badge-ready{background:var(--green-light);color:var(--green-dark)}
+.badge-delivered{background:#D4EDDA;color:#155724}
+.badge-cancelled{background:var(--red-light);color:var(--red)}
+.badge-paid{background:var(--green-light);color:var(--green-dark)}
+.badge-cod{background:var(--amber-light);color:var(--amber)}
+
+/* ── Forms ── */
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+.form-group{display:flex;flex-direction:column;gap:4px}
+.form-label{font-size:11px;font-weight:700;color:var(--text2)}
+input[type=text],input[type=number],input[type=tel],select,textarea{
+  padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius);
+  font-size:13px;background:var(--bg2);color:var(--text);width:100%;outline:none;transition:border-color .2s
+}
+input:focus,select:focus,textarea:focus{border-color:var(--green)}
+.toggle-row{display:flex;align-items:center;gap:8px}
+.toggle{width:36px;height:20px;background:var(--border);border-radius:10px;position:relative;cursor:pointer;transition:background .2s;border:none;flex-shrink:0}
+.toggle.on{background:var(--green)}
+.toggle-thumb{width:14px;height:14px;background:#fff;border-radius:50%;position:absolute;top:3px;left:3px;transition:transform .2s;pointer-events:none}
+.toggle.on .toggle-thumb{transform:translateX(16px)}
+.divider{border:none;border-top:1px solid var(--border);margin:16px 0}
+
+/* ── Search bar ── */
+.search-bar{display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);flex:1;max-width:280px}
+.search-bar input{border:none;background:transparent;font-size:13px;color:var(--text);outline:none;width:100%}
+
+/* ── Status select inline ── */
+.status-select{padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;font-weight:600;background:var(--bg2);color:var(--text)}
+
+/* ── Tabs ── */
+.tabs{display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:20px}
+.tab{padding:8px 16px;cursor:pointer;font-size:13px;font-weight:600;color:var(--text2);border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .15s}
+.tab.active{color:var(--green);border-bottom-color:var(--green)}
+
+/* ── Screens ── */
+.screen{display:none}
+.screen.active{display:block}
+
+/* ── Mini chart bars ── */
+.bar-chart{display:flex;align-items:flex-end;gap:4px;height:80px}
+.bar{flex:1;background:var(--green-light);border-radius:4px 4px 0 0;min-width:8px;position:relative;transition:height .3s}
+.bar:hover{background:var(--green-mid)}
+.bar-label{font-size:9px;color:var(--text3);text-align:center;margin-top:3px}
+
+/* ── Order detail drawer simulation ── */
+.drawer-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.3);z-index:100}
+.drawer-overlay.open{display:flex;align-items:flex-start;justify-content:flex-end}
+.drawer{width:400px;height:100%;background:var(--bg2);overflow-y:auto;padding:24px;box-shadow:-4px 0 20px rgba(0,0,0,.1)}
+.drawer-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
+.close-btn{width:28px;height:28px;border:1px solid var(--border);border-radius:6px;background:transparent;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center}
+
+/* ── Pricing editor ── */
+.price-field{display:flex;align-items:center;gap:8px}
+.price-field input{max-width:100px}
+.price-unit{font-size:12px;color:var(--text2);white-space:nowrap}
+
+/* ── Notification dot ── */
+.notif-dot{width:8px;height:8px;background:var(--red);border-radius:50%;flex-shrink:0}
+</style>
+</head>
+<body>
+<div class="layout">
+
+<!-- ── SIDEBAR ── -->
+<div class="sidebar">
+  <div class="brand">
+    <div class="brand-name">Printing Hub</div>
+    <div class="brand-sub">لوحة الإدارة</div>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-label">الرئيسية</div>
+    <button class="nav-item active" onclick="Nav.go('dashboard',this)">
+      <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z"/></svg>
+      لوحة التحكم
+    </button>
+    <button class="nav-item" onclick="Nav.go('orders',this)">
+      <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25z"/></svg>
+      الطلبات
+      <span class="badge-count" id="pending-count">0</span>
+    </button>
+    <button class="nav-item" onclick="Nav.go('customers',this)">
+      <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z"/></svg>
+      العملاء
+    </button>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-label">الكتالوج</div>
+    <button class="nav-item" onclick="Nav.go('paper-types',this)">
+      <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/></svg>
+      أنواع الورق
+    </button>
+    <button class="nav-item" onclick="Nav.go('textures',this)">
+      <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6.429 9.75L2.25 12l4.179 2.25m0-4.5l5.571 3 5.571-3m-11.142 0L2.25 7.5 12 2.25l9.75 5.25-4.179 2.25m0 0L21.75 12l-4.179 2.25m0 0l4.179 2.25L12 21.75 2.25 16.5l4.179-2.25m11.142 0l-5.571 3-5.571-3"/></svg>
+      الملمس والألوان
+    </button>
+    <button class="nav-item" onclick="Nav.go('binding',this)">
+      <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25"/></svg>
+      أنواع التغليف
+    </button>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-label">الإعدادات</div>
+    <button class="nav-item" onclick="Nav.go('pricing',this)">
+      <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+      الأسعار
+    </button>
+    <button class="nav-item" onclick="Nav.go('settings',this)">
+      <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10.343 3.94c.09-.542.56-.94 1.11-.94h1.093c.55 0 1.02.398 1.11.94l.149.894c.07.424.384.764.78.93.398.164.855.142 1.205-.108l.737-.527a1.125 1.125 0 011.45.12l.773.774c.39.389.44 1.002.12 1.45l-.527.737c-.25.35-.272.806-.107 1.204.165.397.505.71.93.78l.893.15c.543.09.94.56.94 1.109v1.094c0 .55-.397 1.02-.94 1.11l-.893.149c-.425.07-.765.383-.93.78-.165.398-.143.854.107 1.204l.527.738c.32.447.269 1.06-.12 1.45l-.774.773a1.125 1.125 0 01-1.449.12l-.738-.527c-.35-.25-.806-.272-1.203-.107-.397.165-.71.505-.781.929l-.149.894c-.09.542-.56.94-1.11.94h-1.094c-.55 0-1.019-.398-1.11-.94l-.148-.894c-.071-.424-.384-.764-.781-.93-.398-.164-.854-.142-1.204.108l-.738.527c-.447.32-1.06.269-1.45-.12l-.773-.774a1.125 1.125 0 01-.12-1.45l.527-.737c.25-.35.273-.806.108-1.204-.165-.397-.505-.71-.93-.78l-.894-.15c-.542-.09-.94-.56-.94-1.109v-1.094c0-.55.398-1.02.94-1.11l.894-.149c.424-.07.765-.383.93-.78.165-.398.143-.854-.107-1.204l-.527-.738a1.125 1.125 0 01.12-1.45l.773-.773a1.125 1.125 0 011.45-.12l.737.527c.35.25.807.272 1.204.107.397-.165.71-.505.78-.929l.15-.894z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+      إعدادات عامة
+    </button>
+  </div>
+
+  <div style="margin-top:auto;padding:16px;border-top:1px solid var(--border)">
+    <div style="font-size:11px;color:var(--text3)">مسجل دخول كـ</div>
+    <div style="font-size:13px;font-weight:600;margin-top:2px">مدير النظام</div>
+  </div>
+</div>
+
+<!-- ── MAIN ── -->
+<div class="main">
+  <div class="topbar">
+    <div class="page-title" id="page-title">لوحة التحكم</div>
+    <div class="topbar-actions">
+      <div class="search-bar">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"/></svg>
+        <input type="text" placeholder="بحث عن طلب أو عميل..." id="global-search" oninput="Admin.search(this.value)">
+      </div>
+      <button class="btn btn-green" onclick="Admin.refreshData()">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"/></svg>
+        تحديث
+      </button>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- ════ DASHBOARD ════ -->
+    <div class="screen active" id="screen-dashboard">
+      <div class="metric-grid">
+        <div class="metric-card">
+          <div class="metric-label">طلبات اليوم</div>
+          <div class="metric-val" style="color:var(--green)" id="m-today">0</div>
+          <div class="metric-sub">طلب جديد</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">في الانتظار</div>
+          <div class="metric-val" style="color:var(--amber)" id="m-pending">0</div>
+          <div class="metric-sub">بحاجة لمتابعة</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">إيرادات الشهر</div>
+          <div class="metric-val" style="color:var(--green)" id="m-revenue">0</div>
+          <div class="metric-sub">جنيه مصري</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">إجمالي العملاء</div>
+          <div class="metric-val" id="m-customers">0</div>
+          <div class="metric-sub">مسجل</div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div class="panel">
+          <div class="panel-header">
+            <div class="panel-title">الطلبات المعلقة</div>
+            <button class="btn btn-gray btn-sm" onclick="Nav.go('orders',document.querySelector('.nav-item:nth-child(2)'))">عرض الكل</button>
+          </div>
+          <div id="dash-pending-list">
+            <p style="color:var(--text3);font-size:13px">جاري التحميل...</p>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header">
+            <div class="panel-title">نشاط الأسبوع</div>
+          </div>
+          <div class="bar-chart" id="week-chart"></div>
+          <div style="display:flex;gap:4px" id="week-labels"></div>
+        </div>
+      </div>
+
+      <div class="panel" style="margin-top:0">
+        <div class="panel-header">
+          <div class="panel-title">آخر الطلبات</div>
+        </div>
+        <div class="tbl-wrap">
+          <table id="dash-orders-table">
+            <thead><tr>
+              <th>رقم الطلب</th><th>العميل</th><th>النوع</th><th>الإجمالي</th><th>الدفع</th><th>الحالة</th><th>التاريخ</th><th>إجراء</th>
+            </tr></thead>
+            <tbody id="dash-orders-body">
+              <tr><td colspan="8" style="text-align:center;color:var(--text3);padding:20px">جاري التحميل...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════ ORDERS ════ -->
+    <div class="screen" id="screen-orders">
+      <div class="tabs">
+        <div class="tab active" onclick="Admin.filterOrders('all',this)">الكل</div>
+        <div class="tab" onclick="Admin.filterOrders('pending',this)">معلق</div>
+        <div class="tab" onclick="Admin.filterOrders('confirmed',this)">مؤكد</div>
+        <div class="tab" onclick="Admin.filterOrders('in_progress',this)">قيد الطباعة</div>
+        <div class="tab" onclick="Admin.filterOrders('ready',this)">جاهز</div>
+        <div class="tab" onclick="Admin.filterOrders('delivered',this)">مسلّم</div>
+      </div>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr>
+            <th>رقم الطلب</th><th>العميل</th><th>الهاتف</th><th>النوع</th><th>الورق</th><th>نسخ</th><th>الإجمالي</th><th>الدفع</th><th>الحالة</th><th>التاريخ</th><th>إجراء</th>
+          </tr></thead>
+          <tbody id="orders-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ════ CUSTOMERS ════ -->
+    <div class="screen" id="screen-customers">
+      <div class="panel-header" style="margin-bottom:12px">
+        <div></div>
+        <div style="font-size:13px;color:var(--text2)" id="customer-count">0 عميل</div>
+      </div>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr>
+            <th>الاسم</th><th>الهاتف</th><th>واتساب</th><th>طالب</th><th>خصم</th><th>عدد الطلبات</th><th>تاريخ التسجيل</th>
+          </tr></thead>
+          <tbody id="customers-body">
+            <tr><td colspan="7" style="text-align:center;color:var(--text3);padding:20px">جاري التحميل...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ════ PAPER TYPES ════ -->
+    <div class="screen" id="screen-paper-types">
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">أنواع الورق</div>
+          <button class="btn btn-green btn-sm" onclick="Admin.showAddPaper()">+ إضافة نوع</button>
+        </div>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr>
+              <th>الاسم (عربي)</th><th>الاسم (English)</th><th>مضاعف السعر</th><th>الترتيب</th><th>مفعّل</th><th>إجراء</th>
+            </tr></thead>
+            <tbody id="paper-types-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Add/Edit form -->
+      <div class="panel" id="paper-form-panel" style="display:none">
+        <div class="panel-header">
+          <div class="panel-title" id="paper-form-title">إضافة نوع ورق</div>
+          <button class="btn btn-gray btn-sm" onclick="document.getElementById('paper-form-panel').style.display='none'">إلغاء</button>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">الاسم بالعربية</label>
+            <input type="text" id="pf-name-ar" placeholder="مثال: ورق طباعة عادي">
+          </div>
+          <div class="form-group">
+            <label class="form-label">الاسم بالإنجليزية</label>
+            <input type="text" id="pf-name-en" placeholder="Plain paper">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">مضاعف السعر (1.0 = بدون تغيير)</label>
+            <input type="number" id="pf-mult" step="0.1" min="0.1" value="1.0">
+          </div>
+          <div class="form-group">
+            <label class="form-label">الترتيب في القائمة</label>
+            <input type="number" id="pf-order" value="1" min="1">
+          </div>
+        </div>
+        <div class="toggle-row" style="margin-bottom:14px">
+          <button class="toggle on" id="pf-active-toggle" onclick="this.classList.toggle('on')">
+            <div class="toggle-thumb"></div>
+          </button>
+          <span style="font-size:13px">مفعّل في التطبيق</span>
+        </div>
+        <button class="btn btn-green" onclick="Admin.savePaperType()">حفظ</button>
+      </div>
+
+      <!-- Gram options sub-panel -->
+      <div class="panel" id="gram-panel" style="display:none">
+        <div class="panel-header">
+          <div class="panel-title">خيارات الجرام — <span id="gram-paper-name"></span></div>
+          <button class="btn btn-green btn-sm" onclick="Admin.addGramRow()">+ إضافة جرام</button>
+        </div>
+        <div id="gram-rows"></div>
+      </div>
+    </div>
+
+    <!-- ════ TEXTURES ════ -->
+    <div class="screen" id="screen-textures">
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">الملمس والألوان</div>
+          <button class="btn btn-green btn-sm" onclick="Admin.showAddTexture()">+ إضافة ملمس</button>
+        </div>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr>
+              <th>الاسم (عربي)</th><th>الاسم (English)</th><th>مضاعف السعر</th><th>مفعّل</th><th>إجراء</th>
+            </tr></thead>
+            <tbody id="textures-body"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="panel" id="texture-form-panel" style="display:none">
+        <div class="panel-header">
+          <div class="panel-title">إضافة ملمس</div>
+          <button class="btn btn-gray btn-sm" onclick="document.getElementById('texture-form-panel').style.display='none'">إلغاء</button>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">الاسم بالعربية</label>
+            <input type="text" id="tf-name-ar" placeholder="ناعم">
+          </div>
+          <div class="form-group">
+            <label class="form-label">الاسم بالإنجليزية</label>
+            <input type="text" id="tf-name-en" placeholder="Smooth">
+          </div>
+        </div>
+        <div class="form-group" style="margin-bottom:12px">
+          <label class="form-label">مضاعف السعر</label>
+          <input type="number" id="tf-mult" step="0.01" min="1.0" value="1.0" style="max-width:120px">
+        </div>
+        <button class="btn btn-green" onclick="Admin.saveTexture()">حفظ</button>
+      </div>
+    </div>
+
+    <!-- ════ BINDING ════ -->
+    <div class="screen" id="screen-binding">
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">أنواع التغليف</div>
+          <button class="btn btn-green btn-sm" onclick="Admin.showAddBinding()">+ إضافة نوع</button>
+        </div>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr>
+              <th>الاسم (عربي)</th><th>الاسم (English)</th><th>السعر الأساسي (ج.م)</th><th>مفعّل</th><th>إجراء</th>
+            </tr></thead>
+            <tbody id="binding-body"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="panel" id="binding-form-panel" style="display:none">
+        <div class="panel-header">
+          <div class="panel-title">إضافة نوع تغليف</div>
+          <button class="btn btn-gray btn-sm" onclick="document.getElementById('binding-form-panel').style.display='none'">إلغاء</button>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">الاسم بالعربية</label>
+            <input type="text" id="bf-name-ar" placeholder="تجليد سلك مزدوج">
+          </div>
+          <div class="form-group">
+            <label class="form-label">الاسم بالإنجليزية</label>
+            <input type="text" id="bf-name-en" placeholder="Double wire O-binding">
+          </div>
+        </div>
+        <div class="form-group" style="margin-bottom:12px">
+          <label class="form-label">السعر الأساسي (ج.م)</label>
+          <input type="number" id="bf-price" step="0.5" min="0" value="15" style="max-width:120px">
+        </div>
+        <button class="btn btn-green" onclick="Admin.saveBinding()">حفظ</button>
+      </div>
+    </div>
+
+    <!-- ════ PRICING ════ -->
+    <div class="screen" id="screen-pricing">
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">قواعد التسعير الأساسية</div>
+          <button class="btn btn-green" onclick="Admin.savePricing()">حفظ التغييرات</button>
+        </div>
+        <p style="font-size:13px;color:var(--text2);margin-bottom:20px">السعر النهائي = السعر الأساسي × مضاعف نوع الورق × مضاعف الجرام × مضاعف الملمس × عدد النسخ</p>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+          <div>
+            <div class="form-label" style="margin-bottom:8px">سعر الصفحة الواحدة — أبيض وأسود</div>
+            <div class="price-field">
+              <input type="number" id="price-bw" step="0.05" min="0.1" value="0.50" style="max-width:100px">
+              <span class="price-unit">ج.م / صفحة</span>
+            </div>
+          </div>
+          <div>
+            <div class="form-label" style="margin-bottom:8px">سعر الصفحة الواحدة — ألوان</div>
+            <div class="price-field">
+              <input type="number" id="price-color" step="0.25" min="0.5" value="2.00" style="max-width:100px">
+              <span class="price-unit">ج.م / صفحة</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="panel-title" style="margin-bottom:12px">معاينة حساب السعر</div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px">
+          <div class="form-group">
+            <label class="form-label">نوع الطباعة</label>
+            <select id="prev-color" onchange="Admin.previewPrice()">
+              <option value="bw">أبيض وأسود</option>
+              <option value="color">ألوان</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">مضاعف الورق</label>
+            <input type="number" id="prev-paper" value="1.0" step="0.1" min="1" onchange="Admin.previewPrice()">
+          </div>
+          <div class="form-group">
+            <label class="form-label">مضاعف الجرام</label>
+            <input type="number" id="prev-gram" value="1.0" step="0.05" min="1" onchange="Admin.previewPrice()">
+          </div>
+          <div class="form-group">
+            <label class="form-label">عدد النسخ</label>
+            <input type="number" id="prev-copies" value="1" min="1" onchange="Admin.previewPrice()">
+          </div>
+        </div>
+        <div style="background:var(--green-light);padding:14px 18px;border-radius:var(--radius);display:flex;justify-content:space-between;align-items:center">
+          <span style="font-size:14px;color:var(--green-dark)">السعر الإجمالي المتوقع (صفحة واحدة)</span>
+          <span style="font-size:24px;font-weight:800;color:var(--green)" id="price-preview-result">0.50 ج.م</span>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-title" style="margin-bottom:12px">إعداد خصم طلاب المعهد</div>
+        <div style="display:flex;align-items:center;gap:12px">
+          <div class="form-group" style="flex:1;max-width:180px">
+            <label class="form-label">نسبة الخصم %</label>
+            <input type="number" id="student-discount" value="10" min="0" max="50">
+          </div>
+          <button class="btn btn-green" style="margin-top:18px" onclick="alert('تم حفظ نسبة الخصم')">حفظ</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════ SETTINGS ════ -->
+    <div class="screen" id="screen-settings">
+      <div class="panel">
+        <div class="panel-title" style="margin-bottom:16px">إعدادات التطبيق</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">اسم المطبعة</label>
+            <input type="text" value="Printing Hub">
+          </div>
+          <div class="form-group">
+            <label class="form-label">رقم الواتساب للتواصل</label>
+            <input type="tel" placeholder="+201xxxxxxxxx" dir="ltr" style="text-align:left">
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="form-group" style="margin-bottom:12px">
+          <div class="toggle-row">
+            <button class="toggle on" onclick="this.classList.toggle('on')"><div class="toggle-thumb"></div></button>
+            <div>
+              <div style="font-size:13px;font-weight:600">إشعارات الواتساب للعملاء</div>
+              <div style="font-size:11px;color:var(--text2)">إرسال تحديثات الطلبات تلقائياً</div>
+            </div>
+          </div>
+        </div>
+        <div class="form-group" style="margin-bottom:12px">
+          <div class="toggle-row">
+            <button class="toggle on" onclick="this.classList.toggle('on')"><div class="toggle-thumb"></div></button>
+            <div>
+              <div style="font-size:13px;font-weight:600">قبول طلبات جديدة</div>
+              <div style="font-size:11px;color:var(--text2)">إيقاف هذا الخيار يمنع الطلبات الجديدة</div>
+            </div>
+          </div>
+        </div>
+        <div class="form-group">
+          <div class="toggle-row">
+            <button class="toggle" onclick="this.classList.toggle('on')"><div class="toggle-thumb"></div></button>
+            <div>
+              <div style="font-size:13px;font-weight:600">وضع الصيانة</div>
+              <div style="font-size:11px;color:var(--text2)">تعطيل التطبيق مؤقتاً للمستخدمين</div>
+            </div>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <button class="btn btn-green">حفظ الإعدادات</button>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /main -->
+</div><!-- /layout -->
+
+<!-- ── Order Detail Drawer ── -->
+<div class="drawer-overlay" id="order-drawer" onclick="if(event.target===this)Admin.closeDrawer()">
+  <div class="drawer">
+    <div class="drawer-header">
+      <div style="font-size:15px;font-weight:700" id="drawer-title">تفاصيل الطلب</div>
+      <button class="close-btn" onclick="Admin.closeDrawer()">✕</button>
+    </div>
+    <div id="drawer-content"></div>
+  </div>
+</div>
+
+<script>
+const API = "/api/v1";
+const token = localStorage.getItem("ph_token") || "";
+
+const Nav = {
+  go(screen, el) {
+    document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+    document.getElementById("screen-" + screen).classList.add("active");
+    document.querySelectorAll(".nav-item").forEach(n => n.classList.remove("active"));
+    el.classList.add("active");
+    const titles = {
+      dashboard:"لوحة التحكم", orders:"الطلبات", customers:"العملاء",
+      "paper-types":"أنواع الورق", textures:"الملمس والألوان",
+      binding:"أنواع التغليف", pricing:"الأسعار", settings:"الإعدادات"
+    };
+    document.getElementById("page-title").textContent = titles[screen] || screen;
+    Admin.loadScreen(screen);
+  }
+};
+
+/* ── Mock data for UI demonstration ── */
+const MOCK = {
+  orders: [
+    {id:"A1B2C3D4",user:"أحمد محمد",phone:"01012345678",type:"print_only",paper:"ورق عادي",copies:5,total:12.50,payment:"cod",status:"pending",date:"2025-03-27"},
+    {id:"E5F6G7H8",user:"سارة علي",phone:"01198765432",type:"print_bind",paper:"كوشيه",copies:1,total:35.00,payment:"online",status:"in_progress",date:"2025-03-27"},
+    {id:"I9J0K1L2",user:"محمود حسن",phone:"01234567890",type:"print_only",paper:"برستول",copies:10,total:60.00,payment:"cod",status:"ready",date:"2025-03-26"},
+    {id:"M3N4O5P6",user:"نورا أحمد",phone:"01567891234",type:"print_bind",paper:"كانسون",copies:2,total:45.00,payment:"online",status:"confirmed",date:"2025-03-26"},
+    {id:"Q7R8S9T0",user:"عمر خالد",phone:"01011112222",type:"print_only",paper:"ذبدة",copies:3,total:18.00,payment:"cod",status:"delivered",date:"2025-03-25"},
+  ],
+  customers: [
+    {name:"أحمد محمد",phone:"01012345678",wa:true,student:false,discount:0,orders:3,date:"2025-01-15"},
+    {name:"سارة علي",phone:"01198765432",wa:true,student:true,discount:10,orders:7,date:"2025-01-20"},
+    {name:"محمود حسن",phone:"01234567890",wa:false,student:false,discount:0,orders:1,date:"2025-02-01"},
+    {name:"نورا أحمد",phone:"01567891234",wa:true,student:true,discount:10,orders:5,date:"2025-02-14"},
+    {name:"عمر خالد",phone:"01011112222",wa:true,student:false,discount:0,orders:2,date:"2025-03-01"},
+  ],
+  paperTypes: [
+    {id:1,ar:"ورق طباعة عادي",en:"Plain paper",mult:1.0,order:1,active:true},
+    {id:2,ar:"برستول",en:"Bristol",mult:1.5,order:2,active:true},
+    {id:3,ar:"كانسون",en:"Canson",mult:1.8,order:3,active:true},
+    {id:4,ar:"كوشيه",en:"Coated",mult:2.0,order:4,active:true},
+    {id:5,ar:"ذبدة",en:"Butter",mult:1.6,order:5,active:true},
+    {id:6,ar:"كلك",en:"Tracing",mult:1.4,order:6,active:true},
+  ],
+  textures: [
+    {id:1,ar:"ناعم",en:"Smooth",mult:1.0,active:true},
+    {id:2,ar:"خشن",en:"Rough",mult:1.0,active:true},
+    {id:3,ar:"محبب",en:"Grainy",mult:1.05,active:true},
+    {id:4,ar:"مقلم",en:"Lined",mult:1.05,active:true},
+    {id:5,ar:"قماش",en:"Canvas",mult:1.1,active:true},
+  ],
+  binding: [
+    {id:1,ar:"تجليد سلك مزدوج",en:"Double wire O-binding",price:15,active:true},
+    {id:2,ar:"تجليد حرارى",en:"Thermal binding",price:12,active:true},
+    {id:3,ar:"تدبيس",en:"Stapling",price:2,active:true},
+  ],
+};
+
+let currentFilter = "all";
+
+const Admin = {
+  loadScreen(screen) {
+    ({
+      dashboard:   () => this.loadDashboard(),
+      orders:      () => this.loadOrders(),
+      customers:   () => this.loadCustomers(),
+      "paper-types": () => this.loadPaperTypes(),
+      textures:    () => this.loadTextures(),
+      binding:     () => this.loadBinding(),
+      pricing:     () => this.previewPrice(),
+    }[screen] || (() => {}))();
+  },
+
+  loadDashboard() {
+    const pending = MOCK.orders.filter(o => o.status === "pending");
+    document.getElementById("m-today").textContent = MOCK.orders.filter(o => o.date === "2025-03-27").length;
+    document.getElementById("m-pending").textContent = pending.length;
+    document.getElementById("pending-count").textContent = pending.length;
+    document.getElementById("m-revenue").textContent = MOCK.orders.reduce((s,o) => s + o.total, 0).toFixed(0);
+    document.getElementById("m-customers").textContent = MOCK.customers.length;
+
+    // Pending list
+    document.getElementById("dash-pending-list").innerHTML = pending.length
+      ? pending.map(o => `
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)">
+            <div>
+              <div style="font-weight:600;font-size:13px">${o.user}</div>
+              <div style="font-size:11px;color:var(--text2)">#${o.id} · ${o.type === "print_only" ? "طباعة فقط" : "طباعة وتغليف"}</div>
+            </div>
+            <div style="display:flex;gap:6px;align-items:center">
+              <span style="font-weight:700;color:var(--green)">${o.total.toFixed(2)} ج.م</span>
+              <button class="btn btn-green btn-sm" onclick="Admin.updateStatus('${o.id}','confirmed')">تأكيد</button>
+            </div>
+          </div>`)
+          .join("")
+      : `<p style="color:var(--text3);font-size:13px">لا توجد طلبات معلقة</p>`;
+
+    // Week chart
+    const days = ["أحد","اثن","ثلا","أرب","خمس","جمع","سبت"];
+    const vals  = [3,7,5,9,4,8,6];
+    const max   = Math.max(...vals);
+    document.getElementById("week-chart").innerHTML =
+      vals.map((v,i) => `<div class="bar" style="height:${(v/max*70)}px" title="${v} طلبات"></div>`).join("");
+    document.getElementById("week-labels").innerHTML =
+      days.map(d => `<div class="bar-label" style="flex:1">${d}</div>`).join("");
+
+    // Orders table
+    document.getElementById("dash-orders-body").innerHTML = MOCK.orders.map(o => this._orderRow(o)).join("");
+  },
+
+  loadOrders() {
+    const filtered = currentFilter === "all" ? MOCK.orders : MOCK.orders.filter(o => o.status === currentFilter);
+    document.getElementById("orders-body").innerHTML = filtered.map(o => this._orderRow(o, true)).join("");
+  },
+
+  _orderRow(o, full = false) {
+    const statusLabel = {pending:"معلق",confirmed:"مؤكد",in_progress:"قيد الطباعة",ready:"جاهز",delivered:"مسلّم",cancelled:"ملغى"}[o.status] || o.status;
+    const payLabel = o.payment === "cod" ? "عند الاستلام" : "أونلاين";
+    return `<tr>
+      <td><span style="font-weight:700;font-family:monospace">#${o.id}</span></td>
+      <td>${o.user}</td>
+      ${full ? `<td dir="ltr" style="text-align:left">${o.phone}</td>` : ""}
+      <td>${o.type === "print_only" ? "طباعة فقط" : "طباعة وتغليف"}</td>
+      ${full ? `<td>${o.paper}</td><td>${o.copies}</td>` : ""}
+      <td style="font-weight:700;color:var(--green)">${o.total.toFixed(2)} ج.م</td>
+      <td><span class="badge ${o.payment === "cod" ? "badge-cod" : "badge-paid"}">${payLabel}</span></td>
+      <td>
+        <select class="status-select" onchange="Admin.updateStatus('${o.id}',this.value)">
+          ${["pending","confirmed","in_progress","ready","delivered","cancelled"].map(s =>
+            `<option value="${s}" ${s === o.status ? "selected" : ""}>${{pending:"معلق",confirmed:"مؤكد",in_progress:"قيد الطباعة",ready:"جاهز",delivered:"مسلّم",cancelled:"ملغى"}[s]}</option>`
+          ).join("")}
+        </select>
+      </td>
+      <td style="color:var(--text2);font-size:12px">${o.date}</td>
+      <td><button class="btn btn-gray btn-sm" onclick="Admin.openDrawer('${o.id}')">تفاصيل</button></td>
+    </tr>`;
+  },
+
+  filterOrders(status, el) {
+    currentFilter = status;
+    document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+    el.classList.add("active");
+    this.loadOrders();
+  },
+
+  updateStatus(id, newStatus) {
+    const o = MOCK.orders.find(x => x.id === id);
+    if (o) { o.status = newStatus; this.loadDashboard(); this.loadOrders(); }
+  },
+
+  openDrawer(id) {
+    const o = MOCK.orders.find(x => x.id === id);
+    if (!o) return;
+    document.getElementById("drawer-title").textContent = `طلب #${o.id}`;
+    document.getElementById("drawer-content").innerHTML = `
+      <div class="metric-card" style="margin-bottom:12px">
+        <div class="metric-label">العميل</div>
+        <div style="font-size:16px;font-weight:700;margin:4px 0">${o.user}</div>
+        <div style="font-size:13px;color:var(--text2)" dir="ltr">${o.phone}</div>
+      </div>
+      <div class="metric-card" style="margin-bottom:12px">
+        <div style="display:flex;justify-content:space-between">
+          <div><div class="metric-label">نوع الطلب</div><div style="font-weight:600;margin-top:2px">${o.type === "print_only" ? "طباعة فقط" : "طباعة وتغليف"}</div></div>
+          <div><div class="metric-label">نوع الورق</div><div style="font-weight:600;margin-top:2px">${o.paper}</div></div>
+          <div><div class="metric-label">النسخ</div><div style="font-weight:600;margin-top:2px">${o.copies}</div></div>
+        </div>
+      </div>
+      <div class="metric-card" style="margin-bottom:16px;display:flex;justify-content:space-between;align-items:center">
+        <div><div class="metric-label">الإجمالي</div><div style="font-size:22px;font-weight:800;color:var(--green)">${o.total.toFixed(2)} ج.م</div></div>
+        <span class="badge ${o.payment === "cod" ? "badge-cod" : "badge-paid"}">${o.payment === "cod" ? "عند الاستلام" : "أونلاين"}</span>
+      </div>
+      <div class="form-label" style="margin-bottom:6px">تحديث الحالة</div>
+      <select class="status-select" style="width:100%;padding:8px;margin-bottom:12px" onchange="Admin.updateStatus('${o.id}',this.value)">
+        ${["pending","confirmed","in_progress","ready","delivered","cancelled"].map(s =>
+          `<option value="${s}" ${s === o.status ? "selected" : ""}>${{pending:"معلق",confirmed:"مؤكد",in_progress:"قيد الطباعة",ready:"جاهز",delivered:"مسلّم",cancelled:"ملغى"}[s]}</option>`
+        ).join("")}
+      </select>
+      <button class="btn btn-green" style="width:100%;margin-bottom:8px" onclick="alert('تم إرسال رسالة واتساب للعميل')">إرسال تحديث على الواتساب</button>
+      <button class="btn btn-gray" style="width:100%" onclick="Admin.closeDrawer()">إغلاق</button>
+    `;
+    document.getElementById("order-drawer").classList.add("open");
+  },
+
+  closeDrawer() {
+    document.getElementById("order-drawer").classList.remove("open");
+  },
+
+  loadCustomers() {
+    document.getElementById("customer-count").textContent = MOCK.customers.length + " عميل";
+    document.getElementById("customers-body").innerHTML = MOCK.customers.map(c => `
+      <tr>
+        <td style="font-weight:600">${c.name}</td>
+        <td dir="ltr" style="text-align:left">${c.phone}</td>
+        <td><span class="badge ${c.wa ? "badge-ready" : "badge-cancelled"}">${c.wa ? "مفعّل" : "غير مفعّل"}</span></td>
+        <td><span class="badge ${c.student ? "badge-ready" : ""}">${c.student ? "نعم" : "—"}</span></td>
+        <td>${c.discount > 0 ? c.discount + "%" : "—"}</td>
+        <td style="font-weight:600">${c.orders}</td>
+        <td style="color:var(--text2);font-size:12px">${c.date}</td>
+      </tr>`).join("");
+  },
+
+  loadPaperTypes() {
+    document.getElementById("paper-types-body").innerHTML = MOCK.paperTypes.map(p => `
+      <tr>
+        <td style="font-weight:600">${p.ar}</td>
+        <td>${p.en}</td>
+        <td>×${p.mult.toFixed(1)}</td>
+        <td>${p.order}</td>
+        <td><button class="toggle ${p.active ? "on" : ""}" onclick="this.classList.toggle('on')"><div class="toggle-thumb"></div></button></td>
+        <td style="display:flex;gap:6px">
+          <button class="btn btn-gray btn-sm" onclick="Admin.editPaper(${p.id})">تعديل</button>
+          <button class="btn btn-gray btn-sm" onclick="Admin.showGrams(${p.id},'${p.ar}')">جرامات</button>
+        </td>
+      </tr>`).join("");
+  },
+
+  showAddPaper() {
+    document.getElementById("paper-form-panel").style.display = "block";
+    document.getElementById("paper-form-title").textContent = "إضافة نوع ورق";
+    document.getElementById("pf-name-ar").value = "";
+    document.getElementById("pf-name-en").value = "";
+    document.getElementById("pf-mult").value = "1.0";
+    document.getElementById("pf-order").value = MOCK.paperTypes.length + 1;
+  },
+
+  editPaper(id) {
+    const p = MOCK.paperTypes.find(x => x.id === id);
+    document.getElementById("paper-form-panel").style.display = "block";
+    document.getElementById("paper-form-title").textContent = "تعديل: " + p.ar;
+    document.getElementById("pf-name-ar").value = p.ar;
+    document.getElementById("pf-name-en").value = p.en;
+    document.getElementById("pf-mult").value = p.mult;
+    document.getElementById("pf-order").value = p.order;
+  },
+
+  savePaperType() {
+    const ar   = document.getElementById("pf-name-ar").value.trim();
+    const en   = document.getElementById("pf-name-en").value.trim();
+    const mult = parseFloat(document.getElementById("pf-mult").value);
+    const ord  = parseInt(document.getElementById("pf-order").value);
+    if (!ar || !en) return alert("أدخل الاسم بالعربية والإنجليزية");
+    MOCK.paperTypes.push({ id: Date.now(), ar, en, mult, order: ord, active: true });
+    document.getElementById("paper-form-panel").style.display = "none";
+    this.loadPaperTypes();
+  },
+
+  showGrams(paperId, paperName) {
+    document.getElementById("gram-panel").style.display = "block";
+    document.getElementById("gram-paper-name").textContent = paperName;
+    const gramData = [[80,1.0],[100,1.15],[120,1.3],[160,1.5],[200,1.8]];
+    document.getElementById("gram-rows").innerHTML = gramData.map(([g,m]) => `
+      <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
+        <input type="number" value="${g}" style="max-width:70px" placeholder="جرام">
+        <span style="color:var(--text2)">جم/م²</span>
+        <span style="margin-right:auto;color:var(--text2)">مضاعف:</span>
+        <input type="number" value="${m}" step="0.05" style="max-width:80px">
+        <button class="btn btn-red btn-sm" onclick="this.parentElement.remove()">حذف</button>
+      </div>`).join("") +
+      `<button class="btn btn-outline btn-sm" style="margin-top:10px" onclick="Admin.addGramRow()">+ إضافة جرام</button>`;
+  },
+
+  addGramRow() {
+    const container = document.getElementById("gram-rows");
+    const div = document.createElement("div");
+    div.style.cssText = "display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)";
+    div.innerHTML = `<input type="number" placeholder="جرام" style="max-width:70px"><span style="color:var(--text2)">جم/م²</span><span style="margin-right:auto;color:var(--text2)">مضاعف:</span><input type="number" value="1.0" step="0.05" style="max-width:80px"><button class="btn btn-red btn-sm" onclick="this.parentElement.remove()">حذف</button>`;
+    container.insertBefore(div, container.lastElementChild);
+  },
+
+  loadTextures() {
+    document.getElementById("textures-body").innerHTML = MOCK.textures.map(t => `
+      <tr>
+        <td style="font-weight:600">${t.ar}</td>
+        <td>${t.en}</td>
+        <td>×${t.mult.toFixed(2)}</td>
+        <td><button class="toggle ${t.active ? "on" : ""}" onclick="this.classList.toggle('on')"><div class="toggle-thumb"></div></button></td>
+        <td><button class="btn btn-gray btn-sm">تعديل</button></td>
+      </tr>`).join("");
+  },
+
+  showAddTexture() {
+    document.getElementById("texture-form-panel").style.display = "block";
+    document.getElementById("tf-name-ar").value = "";
+    document.getElementById("tf-name-en").value = "";
+    document.getElementById("tf-mult").value = "1.0";
+  },
+
+  saveTexture() {
+    const ar = document.getElementById("tf-name-ar").value.trim();
+    const en = document.getElementById("tf-name-en").value.trim();
+    const mult = parseFloat(document.getElementById("tf-mult").value);
+    if (!ar || !en) return alert("أدخل الاسم");
+    MOCK.textures.push({ id: Date.now(), ar, en, mult, active: true });
+    document.getElementById("texture-form-panel").style.display = "none";
+    this.loadTextures();
+  },
+
+  loadBinding() {
+    document.getElementById("binding-body").innerHTML = MOCK.binding.map(b => `
+      <tr>
+        <td style="font-weight:600">${b.ar}</td>
+        <td>${b.en}</td>
+        <td>${b.price.toFixed(2)} ج.م</td>
+        <td><button class="toggle ${b.active ? "on" : ""}" onclick="this.classList.toggle('on')"><div class="toggle-thumb"></div></button></td>
+        <td><button class="btn btn-gray btn-sm">تعديل</button></td>
+      </tr>`).join("");
+  },
+
+  showAddBinding() {
+    document.getElementById("binding-form-panel").style.display = "block";
+    document.getElementById("bf-name-ar").value = "";
+    document.getElementById("bf-name-en").value = "";
+    document.getElementById("bf-price").value = "15";
+  },
+
+  saveBinding() {
+    const ar = document.getElementById("bf-name-ar").value.trim();
+    const en = document.getElementById("bf-name-en").value.trim();
+    const price = parseFloat(document.getElementById("bf-price").value);
+    if (!ar || !en) return alert("أدخل الاسم");
+    MOCK.binding.push({ id: Date.now(), ar, en, price, active: true });
+    document.getElementById("binding-form-panel").style.display = "none";
+    this.loadBinding();
+  },
+
+  previewPrice() {
+    const bw    = parseFloat(document.getElementById("price-bw")?.value || 0.5);
+    const col   = parseFloat(document.getElementById("price-color")?.value || 2.0);
+    const mode  = document.getElementById("prev-color")?.value || "bw";
+    const paper = parseFloat(document.getElementById("prev-paper")?.value || 1);
+    const gram  = parseFloat(document.getElementById("prev-gram")?.value || 1);
+    const copies = parseInt(document.getElementById("prev-copies")?.value || 1);
+    const base  = mode === "bw" ? bw : col;
+    const total = (base * paper * gram * copies).toFixed(2);
+    const el = document.getElementById("price-preview-result");
+    if (el) el.textContent = total + " ج.م";
+  },
+
+  savePricing() {
+    alert("تم حفظ الأسعار بنجاح. التغييرات مفعّلة فوراً.");
+  },
+
+  search(q) {
+    if (!q) return;
+    const results = MOCK.orders.filter(o => o.user.includes(q) || o.id.toLowerCase().includes(q.toLowerCase()) || o.phone.includes(q));
+    if (results.length) {
+      Nav.go("orders", document.querySelectorAll(".nav-item")[1]);
+      document.getElementById("orders-body").innerHTML = results.map(o => this._orderRow(o, true)).join("");
+    }
+  },
+
+  refreshData() {
+    const screen = document.querySelector(".screen.active").id.replace("screen-", "");
+    this.loadScreen(screen);
+  },
+};
+
+// Boot
+Admin.loadDashboard();
+</script>
+</body>
+</html>

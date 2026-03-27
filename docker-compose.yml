@@ -1,0 +1,65 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: always
+    environment:
+      POSTGRES_DB: printing_hub
+      POSTGRES_USER: ph_user
+      POSTGRES_PASSWORD: \
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+      - ./backend/migrations/001_schema.sql:/docker-entrypoint-initdb.d/001_schema.sql
+    ports:
+      - "5432:5432"
+
+  redis:
+    image: redis:7-alpine
+    restart: always
+    volumes:
+      - redis_data:/data
+
+  minio:
+    image: minio/minio:latest
+    restart: always
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: "adminuser"          # Hardcoded for now
+      MINIO_ROOT_PASSWORD: "adminpassword2025" # Hardcoded for now
+    volumes:
+      - minio_data:/data
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: always
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://ph_user:\@db:5432/printing_hub
+    depends_on:
+      - db
+      - redis
+      - minio
+    ports:
+      - "8000:8000"
+
+  nginx:
+    image: nginx:alpine
+    restart: always
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./frontend:/usr/share/nginx/html:ro
+      - ./admin:/usr/share/nginx/admin:ro
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - backend
+
+volumes:
+  pg_data:
+  redis_data:
+  minio_data:

@@ -1,0 +1,839 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="theme-color" content="#1D9E75">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Printing Hub">
+<title>Printing Hub</title>
+<link rel="manifest" href="/static/manifest.json">
+<link rel="apple-touch-icon" href="/static/icon-192.png">
+<style>
+  /* ── Reset & Base ── */
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --green:#1D9E75;--green-light:#E1F5EE;--green-dark:#0F6E56;
+    --text:#1a1a1a;--text2:#666;--text3:#999;
+    --bg:#fff;--bg2:#f7f7f5;--bg3:#f0f0ed;
+    --border:#e0e0dc;--radius:10px;--radius-lg:16px;
+    --shadow:0 2px 12px rgba(0,0,0,.08);
+  }
+  @media(prefers-color-scheme:dark){
+    :root{--text:#e8e8e4;--text2:#a0a09a;--text3:#666;--bg:#111;--bg2:#1a1a18;--bg3:#222;--border:#333}
+  }
+  html{height:100%;font-size:16px}
+  body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);overflow-x:hidden}
+
+  /* ── Utility ── */
+  .hidden{display:none!important}
+  .screen{display:none;min-height:100dvh;flex-direction:column}
+  .screen.active{display:flex}
+  .scroll-content{flex:1;overflow-y:auto;padding:16px;padding-bottom:90px}
+  .btn{display:block;width:100%;padding:13px;background:var(--green);color:#fff;border:none;border-radius:var(--radius);font-size:15px;font-weight:600;cursor:pointer;text-align:center;transition:opacity .15s}
+  .btn:active{opacity:.85}
+  .btn-outline{background:transparent;color:var(--green);border:1.5px solid var(--green)}
+  .btn-gray{background:var(--bg3);color:var(--text);border:none}
+  .card{background:var(--bg2);border-radius:var(--radius-lg);padding:16px;margin-bottom:12px}
+  .field-label{font-size:12px;color:var(--text2);margin-bottom:5px;margin-top:14px}
+  input[type=text],input[type=tel],input[type=number],textarea,select{
+    width:100%;padding:11px 12px;border:1px solid var(--border);border-radius:var(--radius);
+    font-size:14px;background:var(--bg);color:var(--text);appearance:none;
+    transition:border-color .2s;outline:none;
+  }
+  input:focus,textarea:focus,select:focus{border-color:var(--green)}
+  textarea{resize:none;min-height:70px}
+  .divider{border:none;border-top:1px solid var(--border);margin:16px 0}
+
+  /* ── Top bar ── */
+  .topbar{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--border);background:var(--bg);position:sticky;top:0;z-index:10}
+  .topbar-title{font-size:16px;font-weight:700;color:var(--text)}
+  .lang-btn{padding:5px 10px;border:1px solid var(--border);border-radius:20px;font-size:11px;color:var(--text2);background:transparent;cursor:pointer}
+
+  /* ── Chips ── */
+  .chips{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:4px}
+  .chip{padding:7px 14px;border:1px solid var(--border);border-radius:20px;font-size:13px;color:var(--text2);background:var(--bg2);cursor:pointer;transition:all .15s;white-space:nowrap}
+  .chip.active{background:var(--green-light);border-color:var(--green);color:var(--green-dark);font-weight:600}
+
+  /* ── Paper cards ── */
+  .paper-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .paper-card{padding:10px 8px;border:1px solid var(--border);border-radius:var(--radius);cursor:pointer;text-align:center;background:var(--bg2);transition:all .15s}
+  .paper-card.active{border-color:var(--green);background:var(--green-light)}
+  .paper-card .pname{font-size:12px;font-weight:600;color:var(--text)}
+  .paper-card .pgram{font-size:11px;color:var(--text2);margin-top:2px}
+
+  /* ── Type selection buttons ── */
+  .type-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:16px}
+  .type-card{border:1.5px solid var(--border);border-radius:var(--radius-lg);padding:20px 12px;text-align:center;cursor:pointer;background:var(--bg2);transition:all .2s}
+  .type-card.active{border-color:var(--green);background:var(--green-light)}
+  .type-card .type-icon{font-size:32px;margin-bottom:8px}
+  .type-card .type-name{font-size:14px;font-weight:700;color:var(--text)}
+  .type-card .type-desc{font-size:11px;color:var(--text2);margin-top:4px;line-height:1.4}
+
+  /* ── Color mode ── */
+  .color-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .color-btn{padding:10px;border:1px solid var(--border);border-radius:var(--radius);text-align:center;cursor:pointer;font-size:13px;color:var(--text2);background:var(--bg2)}
+  .color-btn.active{border-color:var(--green);background:var(--green-light);color:var(--green-dark);font-weight:600}
+
+  /* ── Qty stepper ── */
+  .qty-row{display:flex;align-items:center;gap:14px}
+  .qty-btn{width:34px;height:34px;border:1px solid var(--border);border-radius:8px;font-size:20px;background:var(--bg2);color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center}
+  .qty-num{font-size:18px;font-weight:700;min-width:28px;text-align:center}
+
+  /* ── Price panel ── */
+  .price-panel{background:var(--bg);border-top:1px solid var(--border);padding:12px 16px;position:sticky;bottom:0;z-index:10;box-shadow:0 -4px 20px rgba(0,0,0,.06)}
+  .price-row-top{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:10px}
+  .price-label-text{font-size:13px;color:var(--text2)}
+  .price-amount{font-size:26px;font-weight:800;color:var(--green)}
+  .price-sub{font-size:11px;color:var(--text3)}
+
+  /* ── Upload buttons ── */
+  .upload-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .upload-btn{padding:14px 8px;border:1.5px dashed var(--border);border-radius:var(--radius);text-align:center;cursor:pointer;font-size:12px;color:var(--text2);background:var(--bg2);transition:all .15s}
+  .upload-btn:hover,.upload-btn:active{border-color:var(--green);color:var(--green)}
+  .upload-btn svg{display:block;margin:0 auto 6px}
+  .file-tag{display:inline-flex;align-items:center;gap:6px;background:var(--green-light);color:var(--green-dark);padding:4px 10px;border-radius:20px;font-size:11px;margin:4px 3px}
+  .file-tag .rm{cursor:pointer;opacity:.6;font-size:14px}
+
+  /* ── WhatsApp toggle ── */
+  .wa-row{display:flex;align-items:center;gap:10px;padding:12px;background:var(--bg2);border-radius:var(--radius);border:1px solid var(--border)}
+  .wa-icon{width:32px;height:32px;background:#25D366;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .wa-icon svg{width:18px;height:18px}
+  .toggle{width:44px;height:24px;background:var(--border);border-radius:12px;position:relative;cursor:pointer;transition:background .2s;flex-shrink:0;border:none}
+  .toggle.on{background:var(--green)}
+  .toggle-thumb{width:18px;height:18px;background:#fff;border-radius:50%;position:absolute;top:3px;left:3px;transition:transform .2s;pointer-events:none}
+  .toggle.on .toggle-thumb{transform:translateX(20px)}
+
+  /* ── Student checkbox ── */
+  .check-row{display:flex;align-items:flex-start;gap:10px;padding:12px;background:var(--bg2);border-radius:var(--radius);cursor:pointer}
+  .custom-check{width:20px;height:20px;border:1.5px solid var(--border);border-radius:5px;flex-shrink:0;margin-top:1px;display:flex;align-items:center;justify-content:center;transition:all .15s;background:var(--bg)}
+  .custom-check.checked{background:var(--green);border-color:var(--green)}
+  .custom-check.checked::after{content:'✓';color:#fff;font-size:12px;font-weight:700}
+
+  /* ── Orders list ── */
+  .order-item{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--border)}
+  .status-badge{padding:3px 8px;border-radius:10px;font-size:11px;font-weight:600}
+  .status-pending{background:#FFF3CD;color:#856404}
+  .status-confirmed,.status-in_progress{background:#CCE5FF;color:#004085}
+  .status-ready{background:var(--green-light);color:var(--green-dark)}
+  .status-delivered{background:#D4EDDA;color:#155724}
+  .status-cancelled{background:#F8D7DA;color:#721C24}
+
+  /* ── OTP input ── */
+  .otp-row{display:flex;gap:8px;justify-content:center;margin:20px 0}
+  .otp-digit{width:46px;height:54px;border:2px solid var(--border);border-radius:10px;font-size:22px;font-weight:700;text-align:center;background:var(--bg);color:var(--text);transition:border-color .2s}
+  .otp-digit:focus{border-color:var(--green);outline:none}
+
+  /* ── Bottom nav ── */
+  .bottom-nav{display:flex;background:var(--bg);border-top:1px solid var(--border);position:sticky;bottom:0;z-index:20}
+  .nav-item{flex:1;padding:10px 4px;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;color:var(--text3);transition:color .15s;font-size:10px;border:none;background:transparent}
+  .nav-item.active{color:var(--green)}
+  .nav-item svg{width:22px;height:22px}
+
+  /* ── Discount badge ── */
+  .discount-badge{background:var(--green-light);color:var(--green-dark);border:1px solid #9FE1CB;border-radius:var(--radius);padding:8px 12px;font-size:12px;font-weight:600;margin-top:8px;text-align:center}
+
+  /* ── Section header ── */
+  .sec-label{font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
+
+  /* ── Sub-selects row ── */
+  .sub-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SCREEN 1 — Registration
+═══════════════════════════════════════════════════════════ -->
+<div class="screen active" id="screen-register">
+  <div class="topbar">
+    <div class="topbar-title">Printing Hub</div>
+    <button class="lang-btn" onclick="App.toggleLang()">EN / عر</button>
+  </div>
+  <div class="scroll-content">
+    <div style="margin-bottom:20px">
+      <p style="font-size:22px;font-weight:800;margin-bottom:4px" data-t="welcome">مرحباً بك</p>
+      <p style="font-size:14px;color:var(--text2)" data-t="welcome-sub">أدخل بياناتك لتسجيل طلباتك</p>
+    </div>
+
+    <div class="field-label" data-t="lbl-name">الاسم</div>
+    <input type="text" id="reg-name" data-t-ph="ph-name" placeholder="اكتب اسمك الكريم">
+
+    <div class="field-label" data-t="lbl-phone">رقم الهاتف</div>
+    <input type="tel" id="reg-phone" placeholder="01xxxxxxxxx" dir="ltr" style="text-align:left">
+
+    <div style="margin-top:14px">
+      <div class="wa-row">
+        <button class="toggle on" id="wa-toggle" onclick="App.toggleWA()" aria-label="WhatsApp">
+          <div class="toggle-thumb"></div>
+        </button>
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:600" data-t="wa-title">ربط الطلبات بالواتساب</div>
+          <div style="font-size:11px;color:var(--text2)" data-t="wa-sub">استقبل تحديثات طلباتك مباشرة</div>
+        </div>
+        <div class="wa-icon">
+          <svg viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top:12px">
+      <div class="check-row" onclick="App.toggleStudent()">
+        <div class="custom-check" id="student-check"></div>
+        <div>
+          <div style="font-size:13px;font-weight:600" data-t="student-q">هل أنت طالب في المعهد العالى للفنون التطبيقية - 6 أكتوبر؟</div>
+          <div style="font-size:11px;color:var(--text2)" data-t="student-sub">احصل على خصم 10%</div>
+        </div>
+      </div>
+      <div id="student-section" class="hidden">
+        <div class="discount-badge" data-t="discount-msg">تهانينا! خصم 10% مفعّل على جميع طلباتك</div>
+        <div class="field-label" data-t="lbl-sid">رقم القيد في المعهد</div>
+        <input type="text" id="reg-sid" data-t-ph="ph-sid" placeholder="رقم القيد">
+      </div>
+    </div>
+
+    <div style="margin-top:24px">
+      <button class="btn" onclick="App.sendOtp()" data-t="btn-next">التالي — استلام رمز التحقق</button>
+    </div>
+    <p style="font-size:11px;color:var(--text3);text-align:center;margin-top:10px" data-t="otp-note">سيصلك رمز مكون من 6 أرقام</p>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SCREEN 2 — OTP Verification
+═══════════════════════════════════════════════════════════ -->
+<div class="screen" id="screen-otp">
+  <div class="topbar">
+    <button class="btn-gray" style="width:auto;padding:6px 12px;font-size:13px" onclick="App.goTo('register')" data-t="back">رجوع</button>
+    <div class="topbar-title" data-t="verify-title">رمز التحقق</div>
+    <button class="lang-btn" onclick="App.toggleLang()">EN / عر</button>
+  </div>
+  <div class="scroll-content" style="text-align:center">
+    <p style="font-size:16px;font-weight:700;margin:24px 0 8px" data-t="otp-sent">تم إرسال الرمز إلى</p>
+    <p style="font-size:18px;font-weight:800;color:var(--green);direction:ltr" id="otp-phone-display"></p>
+    <p style="font-size:13px;color:var(--text2);margin-top:6px" data-t="otp-enter">أدخل الرمز المكون من 6 أرقام</p>
+
+    <div class="otp-row" id="otp-inputs">
+      <input class="otp-digit" maxlength="1" type="tel" inputmode="numeric">
+      <input class="otp-digit" maxlength="1" type="tel" inputmode="numeric">
+      <input class="otp-digit" maxlength="1" type="tel" inputmode="numeric">
+      <input class="otp-digit" maxlength="1" type="tel" inputmode="numeric">
+      <input class="otp-digit" maxlength="1" type="tel" inputmode="numeric">
+      <input class="otp-digit" maxlength="1" type="tel" inputmode="numeric">
+    </div>
+
+    <button class="btn" style="margin-top:16px" onclick="App.verifyOtp()" data-t="btn-verify">تحقق</button>
+    <button class="btn-outline btn" style="margin-top:10px" onclick="App.sendOtp(true)" data-t="resend-otp">إعادة الإرسال</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SCREEN 3 — Order Type Selection
+═══════════════════════════════════════════════════════════ -->
+<div class="screen" id="screen-order-type">
+  <div class="topbar">
+    <div class="topbar-title" data-t="new-order">طلب جديد</div>
+    <button class="lang-btn" onclick="App.toggleLang()">EN / عر</button>
+  </div>
+  <div class="scroll-content">
+    <p style="font-size:14px;color:var(--text2);margin-bottom:20px" data-t="choose-type">اختر نوع الخدمة المطلوبة</p>
+    <div class="type-grid">
+      <div class="type-card" onclick="App.selectOrderType('print_only')" id="type-print">
+        <div class="type-icon">🖨️</div>
+        <div class="type-name" data-t="type-print-name">طباعة فقط</div>
+        <div class="type-desc" data-t="type-print-desc">بدون تغليف أو تدبيس</div>
+      </div>
+      <div class="type-card" onclick="App.selectOrderType('print_bind')" id="type-bind">
+        <div class="type-icon">📚</div>
+        <div class="type-name" data-t="type-bind-name">طباعة وتغليف</div>
+        <div class="type-desc" data-t="type-bind-desc">تجليد سلك مزدوج</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SCREEN 4 — Order Configuration
+═══════════════════════════════════════════════════════════ -->
+<div class="screen" id="screen-order-config">
+  <div class="topbar">
+    <button class="btn-gray" style="width:auto;padding:6px 12px;font-size:13px" onclick="App.goTo('order-type')" data-t="back">رجوع</button>
+    <div class="topbar-title" id="config-title">طباعة فقط</div>
+    <button class="lang-btn" onclick="App.toggleLang()">EN / عر</button>
+  </div>
+  <div class="scroll-content">
+
+    <!-- FILES -->
+    <div class="sec-label" data-t="sec-files">الملفات</div>
+    <div class="upload-row">
+      <div class="upload-btn" onclick="document.getElementById('file-input').click()">
+        <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"/></svg>
+        <span data-t="upload-files">رفع ملفات</span><br>
+        <small style="color:var(--text3)" data-t="any-type">أي نوع · أي حجم</small>
+      </div>
+      <div class="upload-btn" onclick="App.addLink()">
+        <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244"/></svg>
+        <span data-t="upload-link">رابط ملف</span><br>
+        <small style="color:var(--text3)">Drive, Dropbox...</small>
+      </div>
+    </div>
+    <input type="file" id="file-input" multiple style="display:none" onchange="App.handleFiles(this.files)">
+    <div id="file-tags" style="margin-top:8px"></div>
+
+    <div class="divider"></div>
+
+    <!-- PAPER SIZE -->
+    <div class="sec-label" data-t="sec-size">مقاس الورق</div>
+    <div class="chips" id="size-chips">
+      <div class="chip active" onclick="App.selectChip('size-chips',this,'size','A4')">A4</div>
+      <div class="chip" onclick="App.selectChip('size-chips',this,'size','A5')">A5</div>
+      <div class="chip" onclick="App.selectChip('size-chips',this,'size','A3')">A3</div>
+      <div class="chip" onclick="App.selectChip('size-chips',this,'size','B5')">B5</div>
+      <div class="chip" onclick="App.selectChip('size-chips',this,'size','custom')" data-t="custom-size">مقاس يدوي</div>
+    </div>
+    <div id="custom-size-row" class="hidden" style="margin-top:8px">
+      <input type="text" id="custom-size-input" placeholder="مثال: 15×21 سم" data-t-ph="ph-custom-size">
+    </div>
+    <textarea id="notes-input" style="margin-top:8px" data-t-ph="ph-notes" placeholder="ملاحظات — مثال: عرض الصورة 10 سم × طول 20 سم داخل الورقة، أو أي تعديل في الملف"></textarea>
+
+    <div class="divider"></div>
+
+    <!-- PAPER TYPE -->
+    <div class="sec-label" data-t="sec-paper">نوع الورق</div>
+    <div class="paper-grid" id="paper-type-grid">
+      <!-- populated by JS from API -->
+      <div class="paper-card active" onclick="App.selectPaper(this,1)" data-id="1">
+        <div class="pname" data-t="paper-plain">طباعة عادي</div>
+      </div>
+      <div class="paper-card" onclick="App.selectPaper(this,2)" data-id="2">
+        <div class="pname">برستول</div>
+      </div>
+      <div class="paper-card" onclick="App.selectPaper(this,3)" data-id="3">
+        <div class="pname">كانسون</div>
+      </div>
+      <div class="paper-card" onclick="App.selectPaper(this,4)" data-id="4">
+        <div class="pname">كوشيه</div>
+      </div>
+      <div class="paper-card" onclick="App.selectPaper(this,5)" data-id="5">
+        <div class="pname">ذبدة</div>
+      </div>
+      <div class="paper-card" onclick="App.selectPaper(this,6)" data-id="6">
+        <div class="pname">كلك</div>
+      </div>
+    </div>
+    <div class="sub-row">
+      <select id="gram-select" onchange="App.setGram(this)" data-t-opt="gram-label">
+        <option value="1">جرام: 80</option>
+        <option value="1.15">جرام: 100</option>
+        <option value="1.3">جرام: 120</option>
+        <option value="1.5">جرام: 160</option>
+        <option value="1.8">جرام: 200</option>
+      </select>
+      <select id="color-select" onchange="App.recalcPrice()" data-t-opt="color-label">
+        <option>لون: أبيض</option>
+        <option>لون: كريمي</option>
+        <option>لون: وردي</option>
+      </select>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- TEXTURE -->
+    <div class="sec-label" data-t="sec-texture">ملمس الورق</div>
+    <div class="chips" id="tex-chips">
+      <div class="chip active" onclick="App.selectChip('tex-chips',this,'tex',1.0)">ناعم</div>
+      <div class="chip" onclick="App.selectChip('tex-chips',this,'tex',1.0)">خشن</div>
+      <div class="chip" onclick="App.selectChip('tex-chips',this,'tex',1.05)">محبب</div>
+      <div class="chip" onclick="App.selectChip('tex-chips',this,'tex',1.05)">مقلم</div>
+      <div class="chip" onclick="App.selectChip('tex-chips',this,'tex',1.1)">قماش</div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- COLOR MODE -->
+    <div class="sec-label" data-t="sec-color">ألوان الطباعة</div>
+    <div class="color-row">
+      <div class="color-btn active" id="btn-bw" onclick="App.setColor('bw')" data-t="bw">أبيض وأسود</div>
+      <div class="color-btn" id="btn-color" onclick="App.setColor('color')" data-t="color-print">ألوان</div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- BINDING (shown for print_bind) -->
+    <div id="binding-section" class="hidden">
+      <div class="sec-label" data-t="sec-binding">نوع التغليف</div>
+      <div class="chips" id="binding-chips">
+        <div class="chip active" onclick="App.selectChip('binding-chips',this,'binding',15)">تجليد سلك مزدوج (Double Wire)</div>
+        <div class="chip" onclick="App.selectChip('binding-chips',this,'binding',12)">تجليد حرارى</div>
+        <div class="chip" onclick="App.selectChip('binding-chips',this,'binding',2)">تدبيس</div>
+      </div>
+      <div class="divider"></div>
+    </div>
+
+    <!-- COPIES -->
+    <div class="sec-label" data-t="sec-copies">عدد النسخ</div>
+    <div class="qty-row">
+      <button class="qty-btn" onclick="App.changeQty(-1)">−</button>
+      <div class="qty-num" id="qty-display">1</div>
+      <button class="qty-btn" onclick="App.changeQty(1)">+</button>
+      <span style="font-size:13px;color:var(--text2)" data-t="copies-unit">نسخة</span>
+    </div>
+
+    <div style="height:20px"></div>
+  </div>
+
+  <!-- LIVE PRICE PANEL -->
+  <div class="price-panel">
+    <div class="price-row-top">
+      <div>
+        <div class="price-label-text" data-t="total-label">الإجمالي المقدر</div>
+        <div class="price-sub" id="price-breakdown-mini">ورق × طباعة × نسخ</div>
+      </div>
+      <div class="price-amount" id="total-price">2.50 ج.م</div>
+    </div>
+    <button class="btn" onclick="App.goToPayment()" data-t="btn-next-pay">التالي — الدفع</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SCREEN 5 — Payment
+═══════════════════════════════════════════════════════════ -->
+<div class="screen" id="screen-payment">
+  <div class="topbar">
+    <button class="btn-gray" style="width:auto;padding:6px 12px;font-size:13px" onclick="App.goTo('order-config')" data-t="back">رجوع</button>
+    <div class="topbar-title" data-t="payment-title">طريقة الدفع</div>
+    <button class="lang-btn" onclick="App.toggleLang()">EN / عر</button>
+  </div>
+  <div class="scroll-content">
+    <div class="card" style="display:flex;justify-content:space-between;align-items:center">
+      <span style="font-size:14px;color:var(--text2)" data-t="order-total">إجمالي الطلب</span>
+      <span style="font-size:20px;font-weight:800;color:var(--green)" id="pay-total">0 ج.م</span>
+    </div>
+
+    <div class="sec-label" style="margin-top:16px" data-t="choose-payment">اختر طريقة الدفع</div>
+
+    <div id="pay-methods">
+      <div class="type-card" style="margin-bottom:10px;display:flex;align-items:center;gap:12px;text-align:right" onclick="App.selectPayMethod('card')">
+        <div style="font-size:28px">💳</div>
+        <div><div style="font-weight:700;font-size:14px" data-t="pay-card">بطاقة بنكية</div><div style="font-size:12px;color:var(--text2)">Visa / Mastercard</div></div>
+      </div>
+      <div class="type-card" style="margin-bottom:10px;display:flex;align-items:center;gap:12px;text-align:right" onclick="App.selectPayMethod('fawry')">
+        <div style="font-size:28px">🏪</div>
+        <div><div style="font-weight:700;font-size:14px">Fawry</div><div style="font-size:12px;color:var(--text2)">ادفع في أقرب منفذ فوري</div></div>
+      </div>
+      <div class="type-card" style="margin-bottom:10px;display:flex;align-items:center;gap:12px;text-align:right" onclick="App.selectPayMethod('vodafone_cash')">
+        <div style="font-size:28px">📱</div>
+        <div><div style="font-weight:700;font-size:14px">Vodafone Cash</div><div style="font-size:12px;color:var(--text2)">محفظة فودافون كاش</div></div>
+      </div>
+      <div class="type-card" style="margin-bottom:10px;display:flex;align-items:center;gap:12px;text-align:right" onclick="App.selectPayMethod('cod')">
+        <div style="font-size:28px">💵</div>
+        <div><div style="font-weight:700;font-size:14px" data-t="pay-cod">الدفع عند الاستلام</div><div style="font-size:12px;color:var(--text2)" data-t="pay-cod-sub">ادفع عند استلام طلبك</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SCREEN 6 — My Orders
+═══════════════════════════════════════════════════════════ -->
+<div class="screen" id="screen-my-orders">
+  <div class="topbar">
+    <div class="topbar-title" data-t="my-orders">طلباتي</div>
+    <button class="lang-btn" onclick="App.toggleLang()">EN / عر</button>
+  </div>
+  <div class="scroll-content">
+    <div id="orders-list">
+      <p style="text-align:center;color:var(--text2);margin-top:40px" data-t="no-orders">لا توجد طلبات بعد</p>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     BOTTOM NAV (shown after login)
+═══════════════════════════════════════════════════════════ -->
+<div class="bottom-nav hidden" id="bottom-nav">
+  <button class="nav-item active" onclick="App.navTo('order-type','new')" id="nav-new">
+    <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
+    <span data-t="nav-new">طلب جديد</span>
+  </button>
+  <button class="nav-item" onclick="App.navTo('my-orders','orders')" id="nav-orders">
+    <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25z"/></svg>
+    <span data-t="nav-orders">طلباتي</span>
+  </button>
+</div>
+
+<script>
+const API = "/api/v1";
+const i18n = {
+  ar:{
+    welcome:"مرحباً بك",
+    "welcome-sub":"أدخل بياناتك لتسجيل طلباتك",
+    "lbl-name":"الاسم","lbl-phone":"رقم الهاتف",
+    "ph-name":"اكتب اسمك الكريم",
+    "wa-title":"ربط الطلبات بالواتساب","wa-sub":"استقبل تحديثات طلباتك مباشرة",
+    "student-q":"هل أنت طالب في المعهد العالى للفنون التطبيقية - 6 أكتوبر؟",
+    "student-sub":"احصل على خصم 10%",
+    "discount-msg":"تهانينا! خصم 10% مفعّل على جميع طلباتك",
+    "lbl-sid":"رقم القيد في المعهد","ph-sid":"رقم القيد",
+    "btn-next":"التالي — استلام رمز التحقق",
+    "otp-note":"سيصلك رمز مكون من 6 أرقام",
+    back:"رجوع","verify-title":"رمز التحقق",
+    "otp-sent":"تم إرسال الرمز إلى",
+    "otp-enter":"أدخل الرمز المكون من 6 أرقام",
+    "btn-verify":"تحقق","resend-otp":"إعادة الإرسال",
+    "new-order":"طلب جديد","choose-type":"اختر نوع الخدمة المطلوبة",
+    "type-print-name":"طباعة فقط","type-print-desc":"بدون تغليف أو تدبيس",
+    "type-bind-name":"طباعة وتغليف","type-bind-desc":"تجليد سلك مزدوج",
+    "sec-files":"الملفات","upload-files":"رفع ملفات",
+    "any-type":"أي نوع · أي حجم","upload-link":"رابط ملف",
+    "sec-size":"مقاس الورق","custom-size":"مقاس يدوي",
+    "ph-custom-size":"مثال: 15×21 سم",
+    "ph-notes":"ملاحظات — أي تعديل في الملف",
+    "sec-paper":"نوع الورق","sec-texture":"ملمس الورق",
+    "sec-color":"ألوان الطباعة","bw":"أبيض وأسود","color-print":"ألوان",
+    "sec-binding":"نوع التغليف","sec-copies":"عدد النسخ","copies-unit":"نسخة",
+    "total-label":"الإجمالي المقدر","btn-next-pay":"التالي — الدفع",
+    "payment-title":"طريقة الدفع","order-total":"إجمالي الطلب",
+    "choose-payment":"اختر طريقة الدفع",
+    "pay-card":"بطاقة بنكية","pay-cod":"الدفع عند الاستلام",
+    "pay-cod-sub":"ادفع عند استلام طلبك",
+    "my-orders":"طلباتي","no-orders":"لا توجد طلبات بعد",
+    "nav-new":"طلب جديد","nav-orders":"طلباتي",
+    "paper-plain":"طباعة عادي",
+  },
+  en:{
+    welcome:"Welcome",
+    "welcome-sub":"Enter your details to place orders",
+    "lbl-name":"Full name","lbl-phone":"Phone number",
+    "ph-name":"Your name",
+    "wa-title":"Connect orders to WhatsApp","wa-sub":"Get order updates instantly",
+    "student-q":"Are you a student at the Higher Institute of Applied Arts, 6th October?",
+    "student-sub":"Get 10% discount",
+    "discount-msg":"Congratulations! 10% discount applied to all your orders",
+    "lbl-sid":"Student ID number","ph-sid":"Student ID",
+    "btn-next":"Next — Receive OTP",
+    "otp-note":"You will receive a 6-digit code",
+    back:"Back","verify-title":"Verification",
+    "otp-sent":"Code sent to",
+    "otp-enter":"Enter the 6-digit code",
+    "btn-verify":"Verify","resend-otp":"Resend code",
+    "new-order":"New order","choose-type":"Choose the service type",
+    "type-print-name":"Print only","type-print-desc":"No binding or stapling",
+    "type-bind-name":"Print & bind","type-bind-desc":"Double wire O-binding",
+    "sec-files":"Files","upload-files":"Upload files",
+    "any-type":"Any type · Any size","upload-link":"File link",
+    "sec-size":"Paper size","custom-size":"Custom size",
+    "ph-custom-size":"e.g. 15×21 cm",
+    "ph-notes":"Notes — any file modification",
+    "sec-paper":"Paper type","sec-texture":"Paper texture",
+    "sec-color":"Print color","bw":"Black & white","color-print":"Color",
+    "sec-binding":"Binding type","sec-copies":"Copies","copies-unit":"copies",
+    "total-label":"Estimated total","btn-next-pay":"Next — Payment",
+    "payment-title":"Payment method","order-total":"Order total",
+    "choose-payment":"Choose payment method",
+    "pay-card":"Credit / debit card","pay-cod":"Cash on delivery",
+    "pay-cod-sub":"Pay when you pick up",
+    "my-orders":"My orders","no-orders":"No orders yet",
+    "nav-new":"New order","nav-orders":"My orders",
+    "paper-plain":"Plain paper",
+  }
+};
+
+const App = {
+  lang: "ar",
+  token: localStorage.getItem("ph_token"),
+  user: JSON.parse(localStorage.getItem("ph_user") || "null"),
+  waOn: true,
+  studentOn: false,
+  orderType: "print_only",
+  state: { paperMult:1, gramMult:1, texMult:1, colorMult:1, binding:0, copies:1 },
+  files: [],
+  links: [],
+
+  init() {
+    if (this.token && this.user) {
+      document.getElementById("bottom-nav").classList.remove("hidden");
+      this.goTo("order-type");
+    }
+    this._setupOtp();
+    if ("serviceWorker" in navigator) navigator.serviceWorker.register("/static/sw.js");
+  },
+
+  t(key) { return i18n[this.lang][key] || key; },
+
+  applyLang() {
+    const dir = this.lang === "ar" ? "rtl" : "ltr";
+    document.documentElement.lang = this.lang;
+    document.documentElement.dir = dir;
+    document.querySelectorAll("[data-t]").forEach(el => {
+      const k = el.dataset.t; if (i18n[this.lang][k]) el.textContent = i18n[this.lang][k];
+    });
+    document.querySelectorAll("[data-t-ph]").forEach(el => {
+      const k = el.dataset.tPh; if (i18n[this.lang][k]) el.placeholder = i18n[this.lang][k];
+    });
+  },
+
+  toggleLang() { this.lang = this.lang === "ar" ? "en" : "ar"; this.applyLang(); },
+
+  goTo(screen) {
+    document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+    document.getElementById("screen-" + screen).classList.add("active");
+  },
+
+  navTo(screen, nav) {
+    this.goTo(screen);
+    document.querySelectorAll(".nav-item").forEach(n => n.classList.remove("active"));
+    document.getElementById("nav-" + nav)?.classList.add("active");
+    if (screen === "my-orders") this.loadOrders();
+  },
+
+  toggleWA() {
+    this.waOn = !this.waOn;
+    document.getElementById("wa-toggle").classList.toggle("on", this.waOn);
+  },
+
+  toggleStudent() {
+    this.studentOn = !this.studentOn;
+    document.getElementById("student-check").classList.toggle("checked", this.studentOn);
+    document.getElementById("student-section").classList.toggle("hidden", !this.studentOn);
+  },
+
+  async sendOtp(resend = false) {
+    const phone = document.getElementById("reg-phone").value.trim();
+    if (!phone) return alert(this.t("lbl-phone") + " مطلوب");
+    document.getElementById("otp-phone-display").textContent = phone;
+    try {
+      await fetch(`${API}/auth/send-otp`, {
+        method:"POST", headers:{"Content-Type":"application/json"},
+        body: JSON.stringify({ phone })
+      });
+      this.goTo("otp");
+    } catch { alert("خطأ في الاتصال"); }
+  },
+
+  _setupOtp() {
+    const inputs = document.querySelectorAll(".otp-digit");
+    inputs.forEach((inp, i) => {
+      inp.addEventListener("input", () => {
+        if (inp.value && i < inputs.length - 1) inputs[i+1].focus();
+      });
+      inp.addEventListener("keydown", e => {
+        if (e.key === "Backspace" && !inp.value && i > 0) inputs[i-1].focus();
+      });
+    });
+  },
+
+  async verifyOtp() {
+    const code = [...document.querySelectorAll(".otp-digit")].map(i => i.value).join("");
+    if (code.length < 6) return alert("أدخل الرمز كاملاً");
+    const phone = document.getElementById("reg-phone").value.trim();
+    const name  = document.getElementById("reg-name").value.trim();
+    const sid   = document.getElementById("reg-sid")?.value.trim();
+    try {
+      const resp = await fetch(`${API}/auth/verify-otp`, {
+        method:"POST", headers:{"Content-Type":"application/json"},
+        body: JSON.stringify({ phone, code, name, whatsapp_opt_in: this.waOn, language: this.lang, student_id: sid || null })
+      });
+      if (!resp.ok) { const e = await resp.json(); return alert(e.detail); }
+      const data = await resp.json();
+      this.token = data.access_token;
+      this.user  = data.user;
+      localStorage.setItem("ph_token", this.token);
+      localStorage.setItem("ph_user", JSON.stringify(this.user));
+      document.getElementById("bottom-nav").classList.remove("hidden");
+      this.goTo("order-type");
+    } catch { alert("خطأ في الاتصال"); }
+  },
+
+  selectOrderType(type) {
+    this.orderType = type;
+    document.querySelectorAll(".type-card").forEach(c => c.classList.remove("active"));
+    document.getElementById("type-" + (type === "print_only" ? "print" : "bind")).classList.add("active");
+    document.getElementById("config-title").textContent = type === "print_only" ? this.t("type-print-name") : this.t("type-bind-name");
+    document.getElementById("binding-section").classList.toggle("hidden", type === "print_only");
+    setTimeout(() => this.goTo("order-config"), 200);
+  },
+
+  selectChip(groupId, el, key, val) {
+    document.querySelectorAll("#" + groupId + " .chip").forEach(c => c.classList.remove("active"));
+    el.classList.add("active");
+    this.state[key] = parseFloat(val) || val;
+    if (key === "size" && val === "custom") {
+      document.getElementById("custom-size-row").classList.remove("hidden");
+    } else if (key === "size") {
+      document.getElementById("custom-size-row").classList.add("hidden");
+    }
+    this.recalcPrice();
+  },
+
+  selectPaper(el, id) {
+    document.querySelectorAll(".paper-card").forEach(c => c.classList.remove("active"));
+    el.classList.add("active");
+    this.state.paperTypeId = id;
+    this.recalcPrice();
+  },
+
+  setGram(sel) { this.state.gramMult = parseFloat(sel.value); this.recalcPrice(); },
+  setColor(mode) {
+    this.state.colorMode = mode;
+    this.state.colorMult = mode === "bw" ? 1 : 2.5;
+    document.getElementById("btn-bw").classList.toggle("active", mode === "bw");
+    document.getElementById("btn-color").classList.toggle("active", mode === "color");
+    this.recalcPrice();
+  },
+
+  changeQty(d) {
+    this.state.copies = Math.max(1, this.state.copies + d);
+    document.getElementById("qty-display").textContent = this.state.copies;
+    this.recalcPrice();
+  },
+
+  recalcPrice() {
+    const s = this.state;
+    const paperMult = s.paperMult || 1;
+    const base = (0.5 * s.colorMult * paperMult * s.gramMult * (s.texMult || 1) * s.copies) + (s.binding || 0);
+    const discount = this.user?.discount_pct ? base * this.user.discount_pct / 100 : 0;
+    const total = (base - discount).toFixed(2);
+    document.getElementById("total-price").textContent = total + " ج.م";
+    document.getElementById("price-breakdown-mini").textContent =
+      `${this.lang === "ar" ? "ورق × طباعة × نسخ" : "paper × print × copies"}`;
+    // Debounced API call for server-side accurate price
+    clearTimeout(this._priceTimer);
+    this._priceTimer = setTimeout(() => this._fetchPrice(), 400);
+  },
+
+  async _fetchPrice() {
+    if (!this.token) return;
+    try {
+      const s = this.state;
+      const resp = await fetch(`${API}/orders/price-preview`, {
+        method:"POST", headers:{"Content-Type":"application/json","Authorization":"Bearer "+this.token},
+        body: JSON.stringify({
+          paper_type_id: s.paperTypeId || 1,
+          gram_option_id: null,
+          texture_id: null,
+          color_mode: s.colorMode || "bw",
+          copies: s.copies,
+          binding_type_id: s.bindingTypeId || null,
+          page_count: 1,
+        })
+      });
+      if (resp.ok) {
+        const d = await resp.json();
+        document.getElementById("total-price").textContent = d.total.toFixed(2) + " ج.م";
+        document.getElementById("pay-total").textContent = d.total.toFixed(2) + " ج.م";
+      }
+    } catch {}
+  },
+
+  handleFiles(fileList) {
+    [...fileList].forEach(f => { this.files.push(f); this._renderFileTags(); });
+  },
+
+  addLink() {
+    const url = prompt(this.lang === "ar" ? "أدخل رابط الملف:" : "Enter file link:");
+    if (url) { this.links.push(url); this._renderFileTags(); }
+  },
+
+  _renderFileTags() {
+    const container = document.getElementById("file-tags");
+    container.innerHTML = "";
+    this.files.forEach((f, i) => {
+      const tag = document.createElement("span");
+      tag.className = "file-tag";
+      tag.innerHTML = `${f.name} <span class="rm" onclick="App.removeFile(${i})">✕</span>`;
+      container.appendChild(tag);
+    });
+    this.links.forEach((l, i) => {
+      const tag = document.createElement("span");
+      tag.className = "file-tag";
+      tag.innerHTML = `🔗 ${l.substring(0,30)}... <span class="rm" onclick="App.removeLink(${i})">✕</span>`;
+      container.appendChild(tag);
+    });
+  },
+
+  removeFile(i) { this.files.splice(i, 1); this._renderFileTags(); },
+  removeLink(i) { this.links.splice(i, 1); this._renderFileTags(); },
+
+  goToPayment() {
+    document.getElementById("pay-total").textContent = document.getElementById("total-price").textContent;
+    this.goTo("payment");
+  },
+
+  async selectPayMethod(method) {
+    if (!this.token) return;
+    const notes = document.getElementById("notes-input").value;
+    const size  = document.getElementById("custom-size-input")?.value ||
+                  document.querySelector("#size-chips .chip.active")?.textContent || "A4";
+    try {
+      const resp = await fetch(`${API}/orders`, {
+        method:"POST", headers:{"Content-Type":"application/json","Authorization":"Bearer "+this.token},
+        body: JSON.stringify({
+          order_type: this.orderType,
+          paper_type_id: this.state.paperTypeId || 1,
+          color_mode: this.state.colorMode || "bw",
+          paper_size: size,
+          copies: this.state.copies,
+          notes: notes,
+          file_urls: this.links,
+          payment_method: method,
+          page_count: 1,
+        })
+      });
+      if (!resp.ok) { const e = await resp.json(); return alert(e.detail); }
+      const data = await resp.json();
+
+      if (method !== "cod") {
+        // Initiate online payment
+        const pResp = await fetch(`${API}/payments/initiate`, {
+          method:"POST", headers:{"Content-Type":"application/json","Authorization":"Bearer "+this.token},
+          body: JSON.stringify({ order_id: data.order_id, gateway: method })
+        });
+        if (pResp.ok) {
+          const pd = await pResp.json();
+          window.location.href = pd.iframe_url;
+          return;
+        }
+      }
+
+      alert(this.lang === "ar"
+        ? `تم استلام طلبك! رقم الطلب: ${data.order_id.substring(0,8).toUpperCase()}`
+        : `Order received! ID: ${data.order_id.substring(0,8).toUpperCase()}`);
+      this.files = []; this.links = [];
+      this.navTo("my-orders", "orders");
+    } catch { alert("خطأ في الاتصال"); }
+  },
+
+  async loadOrders() {
+    if (!this.token) return;
+    try {
+      const resp = await fetch(`${API}/orders`, { headers:{"Authorization":"Bearer "+this.token} });
+      const orders = await resp.json();
+      const container = document.getElementById("orders-list");
+      if (!orders.length) {
+        container.innerHTML = `<p style="text-align:center;color:var(--text2);margin-top:40px">${this.t("no-orders")}</p>`;
+        return;
+      }
+      container.innerHTML = orders.map(o => `
+        <div class="order-item">
+          <div>
+            <div style="font-weight:700;font-size:14px">#${o.id.substring(0,8).toUpperCase()}</div>
+            <div style="font-size:12px;color:var(--text2)">${new Date(o.created_at).toLocaleDateString(this.lang === "ar" ? "ar-EG" : "en-GB")}</div>
+          </div>
+          <div style="text-align:left">
+            <div style="font-weight:700;color:var(--green)">${o.total_price.toFixed(2)} ج.م</div>
+            <span class="status-badge status-${o.status}">${o.status}</span>
+          </div>
+        </div>
+      `).join("");
+    } catch {}
+  },
+};
+
+App.init();
+App.applyLang();
+App.recalcPrice();
+</script>
+</body>
+</html>
